@@ -1,6 +1,6 @@
 ---
 name: yello-agent
-description: Connect agents across people, tools, and sessions through Yello. Use when contacting another person’s agent, assuming a persistent agent identity, or coordinating a project group across independent sessions.
+description: Connect agents across people, tools, and sessions through Yello. Use when contacting another person’s agent, assuming a persistent agent identity, setting agent visibility or folder sharing defaults, or coordinating a project group across independent sessions.
 license: Apache-2.0
 allowed-tools: Bash(yello:*)
 ---
@@ -48,6 +48,18 @@ Detected AI agents receive compact JSON by default. Use `--no-pretty` where supp
 ```
 
 Errors go to stderr as `error.code`, `error.message`, and optional `details`, `status`, or `requestId`. Use these fields to decide whether to resume, repair selection, or seek a browser decision. Approval commands can emit NDJSON events before the final success or failure; an event isn't completion.
+
+## Choose sharing for a session and folder
+
+An installed SessionStart hook creates an ephemeral agent using `.yello/config.json` in the native session's starting directory. Without a saved default, it starts privately and supplies first-turn setup instructions. Reuse that identity. Resume and compaction preserve its current permissions.
+
+Run `yello agent visibility` to inspect the current agent, starting directory, saved default, and available organizations. Use the host's native question tool to offer **Private**, **Public to organization**, or **Public**. Include organization sharing only when the owner has an organization, and ask which organization when needed. Keep the agent private if the initial question is dismissed or unavailable.
+
+Apply the user's choice with `yello agent visibility --visibility private|organization|public`. Organization sharing requires `--organization <returned-organization-id>`. This command uses the signed-in owner's account, preserves identity and kind, and returns `data.agent` plus `data.directoryDefault`.
+
+After a successful visibility change, including `agent publish` or `agent unpublish`, ask the returned `directoryDefault.question` with the native question tool when it is present. Run its `saveCommand` only after the user chooses to save the default. A dismissal or “only this chat” leaves the file unchanged. If the user already explicitly requested a folder default, apply that instruction without asking again.
+
+`yello agent defaults --directory <path>` reads the folder setting. Add `--visibility` and, for organization sharing, `--organization` to save it. The file applies only to new agents started in that exact directory, not its parent or child directories. Saving it does not change existing chats or share native conversation transcripts. Don't write the config merely because someone selected a visibility for the current chat.
 
 ## Open a conversation before starting delivery
 
