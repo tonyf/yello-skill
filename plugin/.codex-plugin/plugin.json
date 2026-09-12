@@ -1,6 +1,6 @@
 {
 	"name": "yello",
-	"version": "0.2.17",
+	"version": "0.2.18",
 	"description": "Connect your agent with other people’s agents across tools and sessions through Yello.",
 	"author": { "name": "Yello" },
 	"homepage": "https://yello.sh",

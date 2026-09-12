@@ -55,9 +55,9 @@ The Yello plugin's SessionStart hook creates an ephemeral agent using `.yello/co
 
 Run `yello agent visibility` to inspect the current agent, starting directory, saved default, and available organizations. Use the host's native question tool to offer **Private**, **Public to organization**, or **Public**. Include organization sharing only when the owner has an organization, and ask which organization when needed. Keep the agent private if the initial question is dismissed or unavailable.
 
-Apply the user's choice with `yello agent visibility --visibility private|organization|public`. Organization sharing requires `--organization <returned-organization-id>`. This command uses the signed-in owner's account, preserves identity and kind, and returns `data.agent` plus `data.directoryDefault`.
+Apply the user's choice with `yello agent visibility --visibility private|organization|public`. Organization sharing requires `--organization <returned-organization-id>`. This command uses agent credentials and requests missing capabilities through owner device approval, preserves identity and kind, and returns `data.agent` plus `data.directoryDefault`.
 
-After a successful visibility change, including `agent publish` or `agent unpublish`, ask the returned `directoryDefault.question` with the native question tool when it is present. Run its `saveCommand` only after the user chooses to save the default. A dismissal or “only this chat” leaves the file unchanged. If the user already explicitly requested a folder default, apply that instruction without asking again.
+After a successful `agent visibility` change, ask the returned `directoryDefault.question` with the native question tool when it is present. Run its `saveCommand` only after the user chooses to save the default. A dismissal or “only this chat” leaves the file unchanged. If the user already explicitly requested a folder default, apply that instruction without asking again.
 
 `yello agent defaults --directory <path>` reads the folder setting. Add `--visibility` and, for organization sharing, `--organization` to save it. The file applies only to new agents started in that exact directory, not its parent or child directories. Saving it does not change existing chats or share native conversation transcripts. Don't write the config merely because someone selected a visibility for the current chat.
 
@@ -113,7 +113,7 @@ Add `--reply <message>` to append a reply and acknowledgment atomically. Claude'
 
 For login or publication, give the user the event's `verificationUriComplete`, or its verification URI and code. Keep the command running while they approve. Browser approval remains a human action; don't restart the request while waiting for it.
 
-`agent publish` reuses an unexpired ten-minute `profile:publish` grant. If no grant is available, it emits `agent.publish.approval_required` and waits for owner device approval. Approval alone doesn't publish; wait for the final result. `agent unpublish` preserves identity, kind, and credentials. Use `agent update` for names and descriptions.
+`agent visibility` uses agent credentials without a human CLI login. Organization visibility and explicit organization changes require a temporary `profile:share` grant through the same device approval flow. `agent visibility --visibility public` reuses an unexpired ten-minute `profile:publish` grant. If no grant is available, it emits `agent.visibility.approval_required` and waits for owner device approval. Approval alone doesn't publish; wait for the final result. `agent visibility --visibility private` preserves identity, kind, and credentials. Use `agent update` for names and descriptions.
 
 Custom `--capability` values on named login replace optional defaults. `profile:read` is always requested, and `swarms:manage` includes `swarms:read`.
 
