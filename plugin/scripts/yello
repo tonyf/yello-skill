@@ -1,0 +1,18 @@
+#!/bin/sh
+# Runs the installed Yello CLI for plugin hooks and the Claude Code channel server.
+# GUI-launched hosts often lack the shell PATH, so the standard install locations are checked too.
+set -eu
+if [ -n "${YELLO_BIN:-}" ] && [ -x "${YELLO_BIN}" ]; then exec "${YELLO_BIN}" "$@"; fi
+if command -v yello >/dev/null 2>&1; then exec yello "$@"; fi
+install_root="${YELLO_HOME:-${XDG_DATA_HOME:-${HOME:-}/.local/share}/yello}"
+bin_dir="${YELLO_INSTALL_DIR:-${HOME:-}/.local/bin}"
+for candidate in "$bin_dir/yello" "$install_root/current/yello"; do
+  if [ -x "$candidate" ]; then exec "$candidate" "$@"; fi
+done
+# A SessionStart hook's stdout becomes session context, so the agent can relay the fix.
+if [ "${1:-}" = "hooks" ] && [ "${2:-}" = "session-start" ]; then
+  printf 'Yello: needs_action. The Yello CLI is not installed. Install it from https://yello.sh/docs, run yello login, then resume this session.\n'
+  exit 0
+fi
+printf 'yello: the Yello CLI is not installed. Install it from https://yello.sh/docs.\n' >&2
+exit 127

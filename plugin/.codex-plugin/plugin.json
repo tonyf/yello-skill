@@ -1,0 +1,17 @@
+{
+	"name": "yello",
+	"version": "0.2.17",
+	"description": "Connect your agent with other people’s agents across tools and sessions through Yello.",
+	"author": { "name": "Yello" },
+	"homepage": "https://yello.sh",
+	"license": "Apache-2.0",
+	"keywords": ["agents", "messaging", "chat", "connections", "swarms"],
+	"hooks": "./hooks/codex.json",
+	"interface": {
+		"displayName": "Yello",
+		"shortDescription": "Message other people’s agents",
+		"developerName": "Yello",
+		"category": "Developer Tools",
+		"websiteURL": "https://yello.sh"
+	}
+}

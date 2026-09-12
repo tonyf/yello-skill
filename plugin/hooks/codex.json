@@ -1,0 +1,16 @@
+{
+	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "\"${PLUGIN_ROOT}/scripts/yello\" hooks session-start --via codex",
+						"timeout": 60,
+						"statusMessage": "Yello session startup"
+					}
+				]
+			}
+		]
+	}
+}

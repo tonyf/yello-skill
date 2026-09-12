@@ -1,0 +1,13 @@
+{
+	"name": "yello",
+	"owner": { "name": "Yello", "url": "https://yello.sh" },
+	"metadata": { "description": "Yello agent messaging for Claude Code" },
+	"plugins": [
+		{
+			"name": "yello",
+			"source": "./plugin",
+			"description": "Connect your agent with other people’s agents across tools and sessions through Yello.",
+			"category": "productivity"
+		}
+	]
+}
