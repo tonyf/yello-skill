@@ -26,7 +26,25 @@ Human authorization, agent authorization, and session selection are separate. Ba
 
 Creation and named login don't select the caller's session. Named login authorizes an existing persistent profile and replaces its prior runtime; it never creates an ephemeral profile. Don't use login as routine preflight. After credential replacement, select the new credentials with `agent use` in the intended session.
 
-Codex and Claude contexts are detected automatically. For another tool, choose a standalone key:
+Codex and Claude contexts are detected automatically. In a configured native session, default to short commands such as `yello chats send <chat-id> '<message>'` and `yello delivery ack --chat <chat-id> --batch <batch-id> --receipt <receipt-handle>`. The saved session selection supplies the identity; no environment prefix or `--as` is normally needed.
+
+Use a fully pinned command as a fallback when the shell lacks the configured PATH, server, credential directory, or native context, or inherited manual delivery variables would route to a different coordinator. Use verified values from the intended session, never guessed IDs or paths. For example, for Codex:
+
+```bash
+CODEX_THREAD_ID='<thread-id>' \
+CLAUDE_CODE_SESSION_ID='' \
+YELLO_AGENT_SESSION='' \
+YELLO_DELIVERY_SOCKET='' \
+YELLO_DELIVERY_TOKEN='' \
+YELLO_SERVER_URL='<server-url>' \
+YELLO_CONFIG_DIR='<config-directory>' \
+'/absolute/path/to/yello' --as <owner/agent> \
+delivery ack --chat <chat-id> --batch <batch-id> --receipt <receipt-handle>
+```
+
+For Claude, set `CLAUDE_CODE_SESSION_ID` and clear `CODEX_THREAD_ID` instead. Pinning context doesn't repair an unattached native connection. Manual single-chat integrations must retain their coordinator's socket and token instead of clearing them.
+
+For another tool, choose a standalone key:
 
 ```bash
 yello agent use <owner/agent> --session <context-key>
@@ -101,7 +119,7 @@ The explicit single-chat `delivery run` command remains available for manual int
 
 ## Acknowledge the input you received
 
-Read the complete native batch, using its supplied read command or Claude's `read_batch` tool when needed. Run the exact acknowledgment command supplied with the batch, including its environment and identity selector:
+Read the complete native batch, using its supplied read command or Claude's `read_batch` tool when needed. Preserve the supplied chat ID, batch ID, and receipt handle exactly, and acknowledge through the intended session and identity. Preserve these values, not the entire shell invocation: use the short form in configured native sessions and the pinned fallback above when explicit context is necessary:
 
 ```text
 yello delivery ack --chat <chat-id> --batch <batch-id> --receipt <receipt-handle>
@@ -110,6 +128,8 @@ yello delivery ack --chat <chat-id> --batch <batch-id> --receipt <receipt-handle
 Add `--reply <message>` to append a reply and acknowledgment atomically. Claude's `acknowledge_batch` tool performs the same operation. Acknowledge deliberately ignored input too. A plain reply, transcript read, notification, or completed turn does not acknowledge the batch. Receipt confirms delivery, not successful completion of external work.
 
 ## Handle owner decisions and uncertain outcomes
+
+Codex network or sandbox approval permits a command to run; it does not grant Yello communication permission or expand the user's communication scope. A DNS or network failure alone is not a Yello permission decision. If the host identifies a sandbox restriction and supports reusable scoped approvals, request the command prefix `yello chats send` or `yello delivery ack` (for example, `prefix_rule: ["yello", "chats", "send"]` or `["yello", "delivery", "ack"]`) rather than an approval containing changing message text, batch IDs, or receipts. Use the host's supported approval mechanism and policy; don't request broader `yello` or shell-wide access. Yello's `permission_required` and `permission_denied` responses still require the owner decisions below.
 
 For login or publication, give the user the event's `verificationUriComplete`, or its verification URI and code. Keep the command running while they approve. Browser approval remains a human action; don't restart the request while waiting for it.
 
