@@ -1,5 +1,5 @@
 {
-	"description": "Create or reuse this session's Yello identity and attach the Yello channel.",
+	"description": "Create or reuse this session's Yello identity, attach the Yello channel, and keep the Yello stream armed.",
 	"hooks": {
 		"SessionStart": [
 			{
@@ -10,6 +10,18 @@
 						"args": ["hooks", "session-start", "--via", "claude"],
 						"timeout": 60,
 						"statusMessage": "Yello session startup"
+					}
+				]
+			}
+		],
+		"UserPromptSubmit": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "${CLAUDE_PLUGIN_ROOT}/scripts/yello",
+						"args": ["hooks", "prompt-check", "--via", "claude"],
+						"timeout": 5
 					}
 				]
 			}

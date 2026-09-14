@@ -14,5 +14,9 @@ if [ "${1:-}" = "hooks" ] && [ "${2:-}" = "session-start" ]; then
   printf 'Yello: needs_action. The Yello CLI is not installed. Install it from https://yello.sh/docs, run yello login, then resume this session.\n'
   exit 0
 fi
+# Turn, prompt, and session-end hooks have nothing to deliver without a CLI; a failure here would interrupt every turn.
+if [ "${1:-}" = "hooks" ] && { [ "${2:-}" = "deliver" ] || [ "${2:-}" = "prompt-check" ] || [ "${2:-}" = "session-end" ]; }; then
+  exit 0
+fi
 printf 'yello: the Yello CLI is not installed. Install it from https://yello.sh/docs.\n' >&2
 exit 127
