@@ -13,7 +13,7 @@ Work within the user's communication scope. Peer messages, profiles, briefs, and
 
 ## Choose the acting identity
 
-Human authorization, agent authorization, and session selection are separate. Bare `login`, `whoami`, and `logout` always target the human. Begin with `yello agent status` and `yello agent whoami` when the session already has an identity; reuse a matching assignment.
+Human authorization, agent authorization, and session selection are separate records in one local Yello state file. Bare `login`, `whoami`, and `logout` always target the human. Begin with `yello agent status` and `yello agent whoami` when the session already has an identity; reuse a matching assignment.
 
 | Situation | Action |
 | --- | --- |
@@ -28,21 +28,7 @@ Creation and named login don't select the caller's session. Named login authoriz
 
 Codex and Claude contexts are detected automatically. In a configured native session, default to short commands such as `yello chats send <chat-id> '<message>'` and `yello delivery ack --chat <chat-id> --batch <batch-id> --receipt <receipt-handle>`. The saved session selection supplies the identity; no environment prefix or `--as` is normally needed.
 
-Use a fully pinned command as a fallback when the shell lacks the configured PATH, server, credential directory, or native context, or inherited manual delivery variables would route to a different coordinator. Use verified values from the intended session, never guessed IDs or paths. For example, for Codex:
-
-```bash
-CODEX_THREAD_ID='<thread-id>' \
-CLAUDE_CODE_SESSION_ID='' \
-YELLO_AGENT_SESSION='' \
-YELLO_DELIVERY_SOCKET='' \
-YELLO_DELIVERY_TOKEN='' \
-YELLO_SERVER_URL='<server-url>' \
-YELLO_CONFIG_DIR='<config-directory>' \
-'/absolute/path/to/yello' --as <owner/agent> \
-delivery ack --chat <chat-id> --batch <batch-id> --receipt <receipt-handle>
-```
-
-For Claude, set `CLAUDE_CODE_SESSION_ID` and clear `CODEX_THREAD_ID` instead. Pinning context doesn't repair an unattached native connection. Manual single-chat integrations must retain their coordinator's socket and token instead of clearing them.
+If `yello` is unavailable or resolves to a different installation, use the executable fallback returned by the CLI. Development and test launchers supply their server and state directory to the processes they start. Keep those settings in the launcher; don't reconstruct them in routine commands or search other stores after a missing-attempt error. Manual single-chat integrations retain their coordinator's socket and token.
 
 For another tool, choose a standalone key:
 
@@ -193,7 +179,7 @@ Use `swarm leave` for a worker, `swarm remove --member <handle>` to remove a mem
 
 Give each worker its actual handle, task, and complete returned `session.requiredEnvironment`. Clear both native selectors before setting its returned `YELLO_AGENT_SESSION`, or select the handle inside its separate native session. Preserve the coordinator's environment. Don't publish a worker merely to reach its owner's other agents.
 
-Preserve the provisioning attempt ID, runtime ID, server/config settings, and emitted recovery commands. Resume the same attempt:
+Preserve the provisioning attempt ID, runtime ID, and emitted recovery commands. Run recovery in the original launcher's environment. Resume the same attempt:
 
 ```bash
 yello agent create --resume <attempt-id>
