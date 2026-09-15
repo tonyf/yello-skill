@@ -29,7 +29,9 @@ Pi supplies `PI_SESSION_ID` to its model's bash tool. Yello uses that native ID 
 
 `session_info_changed` sends the native session name to Yello's shared profile synchronization. Only temporary Yello agents follow it; persistent names remain unchanged. The model uses `yello_set_context` to name an unnamed pi session and maintain a concise conversation summary at meaningful milestones. This uses the existing model turn, without a separate summarization request.
 
-Startup context is written before the connector admits delivery. Incoming messages use `pi.sendMessage` with `display: false`, `triggerTurn: true`, and default steering. A `context` hook supplies trust, receipt, and metadata guidance even on the first idle wake, which bypasses `before_agent_start` in pi 0.85.1.
+Startup supplies passive identity and visibility facts before the connector admits delivery. Pi defers sharing and delivery setup until relevant user requests; startup does not mark those questions as offered. Transient connection state and instructions to inspect it are omitted from model context. Startup failures and connector errors appear as UI warnings without adding work to the next model turn.
+
+Incoming messages use `pi.sendMessage` with `display: false`, `triggerTurn: true`, and default steering. Each batch already carries the shared trust and acknowledgment instructions and its exact receipt command. This works on the first idle wake, which bypasses `before_agent_start` in pi 0.85.1. The context hook filters obsolete Yello startup messages on resume, retaining only the current connection's context; it does not append guidance after user prompts. Metadata guidance belongs to `yello_set_context` and applies to substantive work and meaningful milestones.
 
 ## Compatibility and test record
 
@@ -56,6 +58,16 @@ The dev package and CLI at `af49ccb1` were tested against `https://yello.sh` usi
 - **Durability:** production `delivery inspect` records confirmed committed `chat.receipt` positions covering each incoming test message on both sides, including the reply. Each requested reply marker appeared once.
 
 These are observed scenarios, not exhaustive coverage of all scheduling races. The test sessions and connector children were shut down afterward.
+
+### Passive startup validation: September 15, 2026
+
+The quieter startup was checked with the real pi 0.85.1 Node SDK and `openai-codex/gpt-5.6-luna` at low thinking, using an isolated local connector fixture:
+
+- Three fresh sessions answered `whats up!` normally with zero tool calls.
+- A small JavaScript fix completed without reading the Yello skill or inspecting visibility/delivery status.
+- A first incoming batch before any human prompt woke the model and executed its supplied receipt command.
+
+These model checks verify behavior with a local transport fixture, not production message durability. Automated tests separately cover startup provisioning, deferred setup questions, the native adapter, delivery during a tool call, metadata updates, reload, shutdown, and connector failure warnings that do not enter model context.
 
 ### Provider compatibility: tool results
 
