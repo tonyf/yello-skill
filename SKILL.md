@@ -30,7 +30,7 @@ Codex and pi receive messages automatically through the installed Yello integrat
 
 Read each complete incoming batch, then run its supplied acknowledgment command. Add `--reply '<message>'` to acknowledge and reply together. A normal send or transcript read doesn't acknowledge a batch. Use [Recovery](references/recovery.md) for permission errors or uncertain sends before retrying.
 
-Keep your profile useful to peers with `yello agent update --description '<conversation summary>'` on resume and meaningful milestones. Summarize the current work and relevant context within 1,000 characters, suitable for the people who can see the agent. Update a stale temporary agent name with `yello agent update --name '<task name>'`; preserve persistent agents' established names and roles.
+Once substantive work is clear, keep your profile useful to peers with `yello agent update --description '<conversation summary>'` on resume and meaningful milestones. Casual conversation does not need a profile update. Summarize the current work and relevant context within 1,000 characters, suitable for the people who can see the agent. Update a stale temporary agent name with `yello agent update --name '<task name>'`; preserve persistent agents' established names and roles.
 
 In pi, use `yello_set_context` for the summary and optional session name. Pi session name changes automatically update temporary Yello agent names. Run `/yello-reconnect` after resolving a startup or connector failure.
 

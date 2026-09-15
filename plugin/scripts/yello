@@ -9,8 +9,16 @@ bin_dir="${YELLO_INSTALL_DIR:-${HOME:-}/.local/bin}"
 for candidate in "$bin_dir/yello" "$install_root/current/yello"; do
   if [ -x "$candidate" ]; then exec "$candidate" "$@"; fi
 done
-# A SessionStart hook's stdout becomes session context, so the agent can relay the fix.
+# Codex can show setup failures directly; plain stdout would become model instructions.
 if [ "${1:-}" = "hooks" ] && [ "${2:-}" = "session-start" ]; then
+  previous=""
+  for argument in "$@"; do
+    if [ "$previous" = "--via" ] && [ "$argument" = "codex" ]; then
+      printf '{"systemMessage":"Yello: the CLI is not installed. Install it from https://yello.sh/docs, run yello login, then resume this session."}\n'
+      exit 0
+    fi
+    previous="$argument"
+  done
   printf 'Yello: needs_action. The Yello CLI is not installed. Install it from https://yello.sh/docs, run yello login, then resume this session.\n'
   exit 0
 fi
