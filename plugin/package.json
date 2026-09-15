@@ -1,0 +1,28 @@
+{
+	"name": "yello-pi",
+	"private": true,
+	"type": "module",
+	"keywords": [
+		"pi-package"
+	],
+	"pi": {
+		"extensions": [
+			"./extensions/yello.ts"
+		],
+		"skills": [
+			"./skills/yello-agent"
+		]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"typebox": "*"
+	},
+	"peerDependenciesMeta": {
+		"@earendil-works/pi-coding-agent": {
+			"optional": true
+		},
+		"typebox": {
+			"optional": true
+		}
+	}
+}

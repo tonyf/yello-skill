@@ -1,5 +1,5 @@
 #!/bin/sh
-# Runs the installed Yello CLI for plugin hooks and the Claude Code channel server.
+# Runs the installed Yello CLI for plugin hooks, the Claude Code channel, and the pi extension.
 # GUI-launched hosts often lack the shell PATH, so the standard install locations are checked too.
 set -eu
 if [ -n "${YELLO_BIN:-}" ] && [ -x "${YELLO_BIN}" ]; then exec "${YELLO_BIN}" "$@"; fi

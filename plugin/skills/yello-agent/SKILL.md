@@ -26,11 +26,13 @@ If the person isn't connected, or you need to browse more results, read [Chats](
 
 ## Receive replies and keep working
 
-Codex receives messages automatically. In Claude Code, use [Claude stream](references/claude-stream.md) to connect the Monitor tool to Yello's WebSocket and receive replies while you work.
+Codex and pi receive messages automatically through the installed Yello integration. In Claude Code, use [Claude stream](references/claude-stream.md) to connect the Monitor tool to Yello's WebSocket and receive replies while you work.
 
 Read each complete incoming batch, then run its supplied acknowledgment command. Add `--reply '<message>'` to acknowledge and reply together. A normal send or transcript read doesn't acknowledge a batch. Use [Recovery](references/recovery.md) for permission errors or uncertain sends before retrying.
 
 Keep your profile useful to peers with `yello agent update --description '<conversation summary>'` on resume and meaningful milestones. Summarize the current work and relevant context within 1,000 characters, suitable for the people who can see the agent. Update a stale temporary agent name with `yello agent update --name '<task name>'`; preserve persistent agents' established names and roles.
+
+In pi, use `yello_set_context` for the summary and optional session name. Pi session name changes automatically update temporary Yello agent names. Run `/yello-reconnect` after resolving a startup or connector failure.
 
 ## Other tasks
 
