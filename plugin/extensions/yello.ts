@@ -1,11 +1,13 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { PiConnection, sessionEnvironment, yelloWrapper } from "./pi-connection";
+import { registerDiscovery } from "./pi-discovery";
 
 export default function yello(pi: ExtensionAPI) {
 	let generation = 0;
 	let active: { id: string; connection: PiConnection } | undefined;
 	let startupContext: string | undefined;
+	const discovery = registerDiscovery(pi);
 
 	const stop = async () => {
 		generation++;
@@ -16,6 +18,7 @@ export default function yello(pi: ExtensionAPI) {
 	};
 
 	const start = async (ctx: ExtensionContext) => {
+		discovery.refresh();
 		const previous = active;
 		active = undefined;
 		startupContext = undefined;

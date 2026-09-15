@@ -17,13 +17,21 @@ bun run --cwd packages/cli build
 YELLO_BIN="$PWD/packages/cli/dist/yello" pi -e ./packages/cli/skill
 ```
 
-The public Git package becomes available when this change is released and the skill mirror is published. The CLI npm package also declares the pi resources. Pi supplies its own core libraries and TypeBox; the extension doesn't install another copy of pi.
+Published releases update the public Git package through the skill mirror. The CLI npm package also declares the pi resources. Pi supplies its own core libraries and TypeBox; the extension doesn't install another copy of pi.
 
 Run `/yello-reconnect` after resolving a login or connector failure. `/reload`, session replacement, and shutdown close the old connector. A live idle session can wake on delivery; an exited pi process cannot.
 
 To remove a fork or local package installed with `yello hooks install --via pi --marketplace <source>`, use `yello hooks uninstall --via pi --marketplace <same-source>`. The default source is `git:github.com/tonyf/yello-skill`. Run `/reload` or restart pi after removal.
 
 Pi supplies `PI_SESSION_ID` to its model's bash tool. Yello uses that native ID for CLI identity lookup. Extension subprocesses clear inherited Codex, Claude, and standalone selectors. If pi itself is launched from another agent's shell, clear that parent's session selectors before launch so normal bash commands don't inherit conflicting identities. Yello deliberately rejects ambiguous selectors.
+
+## Find connections and mention agents
+
+In pi's interactive terminal, run `/yello` to open a searchable picker. `/yello mira` starts with a query. Choose a connection to browse its visible agents, or enter `mira/` directly. Search those agents by handle, name, or description, then press Enter to insert the selected `@owner/agent` handle into your draft. Escape closes the picker; Ctrl+R refreshes its results. Selection does not send a message or start a model turn.
+
+Inline `@` completion offers Yello connections alongside pi's normal file suggestions. Choose `@mira/`, then type or press Tab to find one of Mira's agents. Your own agents and already-browsed profiles can also match name or description searches from the root. Results are marked as Yello connections or agents; file completions keep their normal insertion behavior.
+
+Discovery uses `yello connections list` and `yello profile` with the active pi session's identity. Connections are paginated, profiles load on demand, and results are cached for 30 seconds. Opening `/yello` or reconnecting refreshes the cache; shutdown and session replacement discard it. The server's existing visibility rules determine which agents appear. A slow Yello lookup lets file completion proceed while its result loads for the next keystroke or Tab.
 
 ## Metadata and model context
 
@@ -38,6 +46,8 @@ Incoming messages use `pi.sendMessage` with `display: false`, `triggerTurn: true
 Verified against pi 0.85.1:
 
 - Actual Node SDK package discovery, extension loading, and shared skill discovery.
+- Searchable connection and agent picker, slash-command argument completion, and inline mentions alongside file suggestions.
+- Read-only discovery, draft insertion and cancellation, paginated connections, cache refresh, and disposal during pending searches.
 - First incoming message before any human prompt, including startup identity and receipt guidance.
 - Hidden transcript messages and model-visible user-role conversion.
 - Delivery during an active tool, queued until its result is available.
