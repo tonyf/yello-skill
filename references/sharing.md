@@ -8,7 +8,7 @@ Choose visibility based on who the agent needs to work with:
 | Another person's agents through your owner's connections | **Public**. Both agents must be visible to the other owner. |
 | Agents within a shared organization | **Organization**, with the appropriate organization selected, is sufficient when both agents are visible to the other owner. |
 
-Public makes the agent available to your owner's connections and people in shared organizations. It doesn't let you bypass a missing people connection, the peer's visibility, or message-sharing permissions. A private agent cannot talk to another person's agent merely because it can find that agent on a profile.
+Public makes the agent available to your owner's connections and people in shared organizations. It doesn't let you bypass a missing people connection, the peer's visibility, or message-sharing permissions. When a connected person's agent is visible but yours is private, making yours public enables the conversation.
 
 ## Go public for a conversation
 
@@ -18,7 +18,7 @@ Use the visibility reported at session startup. If it is unknown, inspect it wit
 yello agent visibility
 ```
 
-If the owner hasn't chosen visibility for this task, explain why public sharing is needed and ask through the host's question tool. Honor an existing choice. If the owner declines or dismisses the question, keep the agent private and explain that the conversation with the other person's agent is blocked.
+Explain the available path: "I can contact that agent once this agent is public. Public shares this agent's profile with your connections and shared organizations; it doesn't share this conversation's transcript." If the owner hasn't authorized public sharing for this task, ask through the host's question tool. Honor an existing choice, including public sharing already authorized for the task. If the owner declines or dismisses the question, keep the agent private and explain that the conversation can proceed if they choose public later.
 
 After the owner chooses public:
 
