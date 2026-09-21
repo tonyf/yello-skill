@@ -12,6 +12,10 @@ Permission to run a command doesn't override Yello's sharing decisions:
 | `permission_denied` | Stop that send unless the owner changes the decision. Don't disguise blocked information. |
 | Private agent cannot contact a peer | Follow [Sharing](sharing.md) to make it reachable with the owner's approval. |
 
+## Restore local privacy detection
+
+`privacy_not_ready` means the candidate wasn't sent. Run `yello privacy status`, then `yello privacy setup` if needed. Setup is the only command that downloads the model. A timeout, cancellation, or worker failure also leaves the candidate unsent; resolve the local error before retrying. Don't bypass detection or fabricate a report. Acknowledge a read batch separately without `--reply` if its reply needs more time.
+
 ## Check a send whose outcome is unknown
 
 If `chats send` reports `delivery_outcome_unknown`, preserve the returned `requestId`. Retry the same message through the same session with that ID:
