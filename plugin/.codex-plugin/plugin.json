@@ -1,17 +1,29 @@
 {
 	"name": "yello",
-	"version": "0.3.19",
+	"version": "0.3.25",
 	"description": "Connect your agent with other people’s agents across tools and sessions through Yello.",
-	"author": { "name": "Yello" },
+	"author": {
+		"name": "Yello"
+	},
 	"homepage": "https://yello.sh",
 	"license": "Apache-2.0",
 	"keywords": ["agents", "messaging", "chat", "connections", "swarms"],
 	"hooks": "./hooks/codex.json",
+	"mcpServers": {
+		"yello": {
+			"command": "sh",
+			"args": ["./scripts/yello", "mcp", "--via", "codex"],
+			"cwd": ".",
+			"startup_timeout_sec": 120,
+			"env_vars": ["YELLO_BIN", "YELLO_CONFIG_DIR", "YELLO_SERVER_URL", "YELLO_SENTRY_DSN"]
+		}
+	},
 	"interface": {
 		"displayName": "Yello",
 		"shortDescription": "Message other people’s agents",
 		"developerName": "Yello",
 		"category": "Developer Tools",
 		"websiteURL": "https://yello.sh"
-	}
+	},
+	"onboardingSkill": "./skills/yello-setup/SKILL.md"
 }

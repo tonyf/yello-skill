@@ -1,30 +1,25 @@
 #!/bin/sh
-# Runs the installed Yello CLI for plugin hooks, the Claude Code channel, and the pi extension.
-# GUI-launched hosts often lack the shell PATH, so the standard install locations are checked too.
+# Plugin-owned runtime; YELLO_BIN is an explicit development override.
 set -eu
-if [ -n "${YELLO_BIN:-}" ] && [ -x "${YELLO_BIN}" ]; then exec "${YELLO_BIN}" "$@"; fi
-if command -v yello >/dev/null 2>&1; then exec yello "$@"; fi
-install_root="${YELLO_HOME:-${XDG_DATA_HOME:-${HOME:-}/.local/share}/yello}"
-bin_dir="${YELLO_INSTALL_DIR:-${HOME:-}/.local/bin}"
-for candidate in "$bin_dir/yello" "$install_root/current/yello"; do
-  if [ -x "$candidate" ]; then exec "$candidate" "$@"; fi
-done
-# Codex can show setup failures directly; plain stdout would become model instructions.
-if [ "${1:-}" = "hooks" ] && [ "${2:-}" = "session-start" ]; then
+if [ -n "${YELLO_BIN:-}" ]; then
+  if [ -x "$YELLO_BIN" ]; then exec "$YELLO_BIN" "$@"; fi
+  printf 'Yello: YELLO_BIN is not executable.\n' >&2
+  exit 1
+fi
+script_dir="${0%/*}"
+if runtime_path="$(/bin/sh "$script_dir/runtime")"; then exec "$runtime_path" "$@"; fi
+# Setup failures belong in the host UI; stdout is otherwise reserved for its protocol.
+if [ "${1:-}" = hooks ] && [ "${2:-}" = session-start ]; then
   previous=""
   for argument in "$@"; do
-    if [ "$previous" = "--via" ] && [ "$argument" = "codex" ]; then
-      printf '{"systemMessage":"Yello: the CLI is not installed. Install it from https://yello.sh/docs, run yello login, then resume this session."}\n'
+    if [ "$previous" = --via ] && [ "$argument" = codex ]; then
+      printf '{"systemMessage":"Yello: plugin runtime setup failed. Check the hook error for details, reinstall the released plugin if needed, then resume this session."}\n'
       exit 0
     fi
     previous="$argument"
   done
-  printf 'Yello: needs_action. The Yello CLI is not installed. Install it from https://yello.sh/docs, run yello login, then resume this session.\n'
+  printf 'Yello: needs_action. Plugin runtime setup failed; check the hook error and resume this session after fixing it.\n'
   exit 0
 fi
-# Turn, prompt, and session-end hooks have nothing to deliver without a CLI; a failure here would interrupt every turn.
-if [ "${1:-}" = "hooks" ] && { [ "${2:-}" = "deliver" ] || [ "${2:-}" = "prompt-check" ] || [ "${2:-}" = "session-end" ]; }; then
-  exit 0
-fi
-printf 'yello: the Yello CLI is not installed. Install it from https://yello.sh/docs.\n' >&2
-exit 127
+if [ "${1:-}" = hooks ] && { [ "${2:-}" = deliver ] || [ "${2:-}" = prompt-check ] || [ "${2:-}" = session-end ]; }; then exit 0; fi
+exit 1

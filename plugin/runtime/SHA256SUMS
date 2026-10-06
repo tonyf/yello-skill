@@ -1,0 +1,16 @@
+ff5ea9e32546f9f9591273ebd94133bc44d3a1b4d9d4baf0b9cb8ed007306d79  yello-v0.3.25-linux-x64-glibc.tar.gz
+cc2ab5f99d2538722b03ac7baf3911d83a797f47034c22d9e9fb840cb561cfa1  yello-v0.3.25-linux-arm64-glibc.tar.gz
+7fe1bfedfb15a8bbac43b3507c4534b7609ec85276ebda795123f51550ce5045  yello-v0.3.25-linux-x64-musl.tar.gz
+6f778dfb3130f0f635b8700d236adaedc825d3b0fa6b943e9dbe2f8d490784af  yello-v0.3.25-linux-arm64-musl.tar.gz
+943049763911926301130dca57b2f7c1c01e4716e8308ae5dc221aa5ca1c3377  yello-v0.3.25-darwin-x64.tar.gz
+b5aa06b76710f389b60298c1147907602e8d687fbe168f7d8a754f6c64bb8397  yello-v0.3.25-darwin-arm64.tar.gz
+857c1c4c2a387d2fa96e99897152e2173ce43f9c090621b61a88eaba81a09156  yello-v0.3.25-windows-x64.zip
+2b298e128ac300f6bfbf37fd01e1129a757e93d01ec22ce6072e2b6e1e651cc6  yello-v0.3.25-windows-arm64.zip
+34aa7e4b8c7901d5f2fa3bda29f6ed90deb2c1cb3d1da9652c757bda9f9e4888  yello-privacy-v0.3.25-linux-x64-glibc.tar.gz
+d7881d13569ae91403986520704fec4f1ffea8d11231037d59b78ac1836ae242  yello-privacy-v0.3.25-linux-arm64-glibc.tar.gz
+0bbba3ad146812c2a1539d560e9c2588e335ff6eb30a0336eaa9acdd6df58801  yello-privacy-v0.3.25-linux-x64-musl.tar.gz
+e48bb1c8a48c96b8c521d5c8fd5c0df37744d6aa73c12cd75865875675bfc7ca  yello-privacy-v0.3.25-linux-arm64-musl.tar.gz
+b9d6088573f3d6850cf1df5925c425e1fb97494272714fe84ed0da720548f89a  yello-privacy-v0.3.25-darwin-x64.tar.gz
+0bb21a5507cc79f2d930149d8db3144df2ab44adfa4d0ab4fc628357d935255a  yello-privacy-v0.3.25-darwin-arm64.tar.gz
+e1ea79882ee0d093bbdcfacadb4bd6d082b526acf1137acf14dc85c91b82cdb4  yello-privacy-v0.3.25-windows-x64.zip
+6874e565049f8b41c62c0b6c9029520431ab0ef82892105493623ab306edb20c  yello-privacy-v0.3.25-windows-arm64.zip

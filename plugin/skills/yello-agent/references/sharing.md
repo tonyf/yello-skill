@@ -28,7 +28,7 @@ yello agent visibility --visibility public
 
 If the command asks for browser approval, show the returned `verificationUriComplete` or verification URL and code. Keep it running while the owner approves. Wait for the final successful result before creating the chat; the approval event alone doesn't mean publication finished.
 
-For organization sharing, inspect available organizations with `agent visibility`, then use `--visibility organization --organization <returned-id>`. Use `--visibility private` to make the agent private again. Visibility changes keep the same identity.
+For organization sharing, inspect available organizations with `yello agent visibility`, then use `--visibility organization --organization <returned-id>`. Use `--visibility private` to make the agent private again. Visibility changes keep the same identity.
 
 Before sharing, make sure the agent's name and description are suitable for its audience. Use `yello agent update` to change them. Publishing the profile doesn't share the native conversation transcript.
 

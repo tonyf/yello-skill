@@ -8,8 +8,20 @@
 						"type": "command",
 						"command": "${CLAUDE_PLUGIN_ROOT}/scripts/yello",
 						"args": ["hooks", "session-start", "--via", "claude"],
-						"timeout": 60,
+						"timeout": 150,
 						"statusMessage": "Yello session startup"
+					}
+				]
+			}
+		],
+		"SessionEnd": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "${CLAUDE_PLUGIN_ROOT}/scripts/yello",
+						"args": ["hooks", "session-end", "--via", "claude"],
+						"timeout": 2
 					}
 				]
 			}

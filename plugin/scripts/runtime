@@ -1,0 +1,204 @@
+#!/bin/sh
+# Resolve the plugin's exact compiled runtime. Stdout is only its absolute path.
+set -eu
+umask 077
+PATH="${PATH:+$PATH:}/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH
+plugin_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)"
+version="$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([0-9][0-9.]*\)".*/\1/p' "$plugin_root/.codex-plugin/plugin.json")"
+case "$version" in ''|*[!0-9.]*|.*|*..*|*.) echo 'Yello: invalid plugin version.' >&2; exit 1 ;; esac
+
+os_name="$(uname -s)"
+machine="$(uname -m)"
+case "$os_name" in
+  Darwin)
+    os=darwin
+    if [ "$(sysctl -n hw.optional.arm64 2>/dev/null || printf 0)" = 1 ]; then machine=arm64; fi
+    ;;
+  Linux) os=linux ;;
+  *) echo 'Yello native integration requires macOS, Linux, or WSL.' >&2; exit 1 ;;
+esac
+case "$machine" in
+  x86_64|amd64) arch=x64 ;;
+  arm64|aarch64) arch=arm64 ;;
+  *) echo 'Yello supports x64 and arm64.' >&2; exit 1 ;;
+esac
+target="$os-$arch"
+if [ "$os" = linux ]; then
+  libc=glibc
+  if (ldd --version 2>&1 || true) | grep -qi musl; then libc=musl;
+  elif find /lib -maxdepth 2 -name 'ld-musl-*.so.1' -print -quit 2>/dev/null | grep -q .; then libc=musl; fi
+  target="$target-$libc"
+fi
+
+artifact="yello-v$version-$target.tar.gz"
+checksums="$plugin_root/runtime/SHA256SUMS"
+if [ ! -s "$checksums" ]; then
+  echo 'Yello: this plugin has no pinned runtime manifest. Reinstall the released plugin; developers can set YELLO_BIN to their checkout build.' >&2
+  exit 1
+fi
+digest="$(awk -v name="$artifact" '$2 == name { print $1; exit }' "$checksums")"
+case "$digest" in ''|*[!0-9a-f]*) echo 'Yello: no valid runtime checksum for this platform.' >&2; exit 1 ;; esac
+[ "${#digest}" -eq 64 ] || { echo 'Yello: invalid runtime checksum.' >&2; exit 1; }
+cache="${YELLO_PLUGIN_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/yello/plugin-runtimes}"
+mkdir -p "$cache"
+cache="$(CDPATH= cd -- "$cache" && pwd -P)"
+destination="$cache/$version-$target-$digest"
+if [ -x "$destination/yello" ] && [ -f "$destination/.verified" ]; then
+  printf '%s\n' "$destination/yello"
+  exit 0
+fi
+
+lock="$destination.lock"
+owner_file=""
+stage=""
+download_pid=""
+watchdog_pid=""
+# A PID can belong to a different process after a crash. Linux exposes exact
+# boot/start identities without procps or GNU date (also works with BusyBox).
+process_identity() {
+  if [ "$os" = linux ]; then
+    process_stat="$(cat "/proc/$1/stat" 2>/dev/null)" || return 1
+    start_ticks="$(printf '%s\n' "$process_stat" | sed 's/.*) //' | awk '{print $20}')"
+    boot_id="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)" || return 1
+    case "$start_ticks" in ''|*[!0-9]*) return 1 ;; esac
+    case "$boot_id" in ''|*[!0-9a-f-]*) return 1 ;; esac
+    printf 'v2:%s:%s\n' "$boot_id" "$start_ticks"
+    return
+  fi
+  started="$(LC_ALL=C TZ=UTC ps -p "$1" -o lstart= 2>/dev/null)" || return 1
+  [ -n "$started" ] || return 1
+  epoch="$(LC_ALL=C date -j -u -f '%a %b %e %T %Y' "$started" +%s 2>/dev/null)" || return 1
+  printf 'v1:%s\n' "$epoch"
+}
+# Only legacy owner files need wall time. If inspection is unavailable, keep the
+# live owner; lack of proof never authorizes stealing its lock.
+process_epoch() {
+  case "$1" in v1:*) printf '%s\n' "${1#v1:}"; return ;; esac
+  ticks_per_second="$(getconf CLK_TCK 2>/dev/null)" || return 1
+  boot_seconds="$(awk '$1 == "btime" { print $2 }' /proc/stat 2>/dev/null)" || return 1
+  case "$ticks_per_second" in ''|0|*[!0-9]*) return 1 ;; esac
+  case "$boot_seconds" in ''|*[!0-9]*) return 1 ;; esac
+  awk -v ticks="${1##*:}" -v hz="$ticks_per_second" -v boot="$boot_seconds" 'BEGIN { printf "%.0f\n", boot + int(ticks / hz) }'
+}
+installer_started="$(process_identity "$$")" || {
+  echo 'Yello: could not verify the runtime installer process identity.' >&2; exit 1
+}
+cleanup() {
+  if [ -n "$watchdog_pid" ]; then kill "$watchdog_pid" 2>/dev/null || true; fi
+  if [ -n "$download_pid" ]; then kill "$download_pid" 2>/dev/null || true; fi
+  if [ -n "$stage" ]; then rm -rf "$stage"; fi
+  if [ -n "$owner_file" ] && rm "$owner_file" 2>/dev/null; then rmdir "$lock" 2>/dev/null || true; fi
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+attempt=0
+empty_observations=0
+while :; do
+  if mkdir "$lock" 2>/dev/null; then
+    owner_file="$(mktemp "$lock/owner.$$.XXXXXX" 2>/dev/null || true)"
+    # An empty lock can be reclaimed while its creator is suspended. Only the
+    # sole claimant may proceed after writing into a possibly replaced directory.
+    if [ -n "$owner_file" ]; then
+      printf '%s\n' "$installer_started" > "$owner_file"
+      if [ "$(ls -A "$lock" 2>/dev/null)" = "${owner_file##*/}" ]; then break; fi
+    fi
+    if [ -n "$owner_file" ] && rm "$owner_file" 2>/dev/null; then rmdir "$lock" 2>/dev/null || true; fi
+    owner_file=""
+  fi
+  if [ -x "$destination/yello" ] && [ -f "$destination/.verified" ]; then printf '%s\n' "$destination/yello"; exit 0; fi
+  # Unlink only the observed owner's unique filename. A racing reclaimer cannot
+  # remove a successor's ownership after the old directory has been replaced.
+  for candidate in "$lock"/owner.*; do
+    [ -f "$candidate" ] || continue
+    owner_part="${candidate##*/owner.}"
+    lock_pid="${owner_part%%.*}"
+    case "$lock_pid" in
+      ''|*[!0-9]*) ;;
+      *) stale_owner=false
+         if current_started="$(process_identity "$lock_pid")"; then
+           recorded_started="$(cat "$candidate" 2>/dev/null || true)"
+           case "$recorded_started" in
+             v2:*)
+               recorded_boot="${recorded_started#v2:}"
+               recorded_ticks="${recorded_boot#*:}"
+               recorded_boot="${recorded_boot%%:*}"
+               case "$recorded_ticks" in ''|*[!0-9]*) ;; *)
+                 if printf '%s\n' "$recorded_boot" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+                   if [ "$recorded_started" != "$current_started" ]; then stale_owner=true; fi
+                 fi ;;
+               esac ;;
+             v1:*)
+               recorded_epoch="${recorded_started#v1:}"
+               case "$recorded_epoch" in ''|*[!0-9]*) ;; *)
+                 if current_epoch="$(process_epoch "$current_started")" && [ "$recorded_epoch" != "$current_epoch" ]; then stale_owner=true; fi ;;
+               esac ;;
+             '')
+               # Previous releases wrote empty owner files. A process that
+               # started after the file was created cannot be its installer.
+               if [ "$os" = darwin ]; then created="$(stat -f %m "$candidate" 2>/dev/null || true)";
+               else created="$(stat -c %Y "$candidate" 2>/dev/null || true)"; fi
+               case "$created" in ''|*[!0-9]*) ;; *)
+                 if current_epoch="$(process_epoch "$current_started")" && [ "$current_epoch" -gt "$created" ]; then stale_owner=true; fi ;;
+               esac ;;
+           esac
+         else
+           # A failed signal probe may mean EPERM. Only ESRCH proves death.
+           if probe_error="$(LC_ALL=C kill -0 "$lock_pid" 2>&1)"; then :;
+           else case "$probe_error" in *'No such process'*) stale_owner=true ;; esac; fi
+         fi
+         if [ "$stale_owner" = true ]; then
+           if rm "$candidate" 2>/dev/null; then rmdir "$lock" 2>/dev/null || true; fi
+         fi ;;
+    esac
+  done
+  if [ -d "$lock" ] && [ -z "$(ls -A "$lock" 2>/dev/null)" ]; then
+    empty_observations=$((empty_observations + 1))
+    if [ "$empty_observations" -ge 5 ]; then rmdir "$lock" 2>/dev/null || true; fi
+  else
+    empty_observations=0
+  fi
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 120 ] || { echo 'Yello: another runtime installation has not finished. Resume this session to retry.' >&2; exit 1; }
+  sleep 1
+done
+if [ -x "$destination/yello" ] && [ -f "$destination/.verified" ]; then printf '%s\n' "$destination/yello"; exit 0; fi
+stage="$(mktemp -d "$cache/.download.XXXXXX")"
+archive="$stage/$artifact"
+url="${YELLO_DOWNLOAD_BASE_URL:-https://downloads.yello.sh/cli}/releases/$version/$artifact"
+printf 'Yello: installing plugin runtime %s for %s.\n' "$version" "$target" >&2
+if command -v curl >/dev/null 2>&1; then
+  curl -fsSL --connect-timeout 10 --max-time 110 "$url" -o "$archive"
+elif command -v wget >/dev/null 2>&1; then
+  wget -q -t 1 -T 110 -O "$archive" "$url" &
+  download_pid=$!
+  (
+    watchdog_sleep=""
+    trap 'if [ -n "$watchdog_sleep" ]; then kill "$watchdog_sleep" 2>/dev/null || true; fi; exit 0' HUP INT TERM
+    sleep 110 &
+    watchdog_sleep=$!
+    wait "$watchdog_sleep" || exit 0
+    kill "$download_pid" 2>/dev/null || true
+  ) </dev/null >/dev/null 2>&1 &
+  watchdog_pid=$!
+  download_result=0
+  wait "$download_pid" || download_result=$?
+  download_pid=""
+  kill "$watchdog_pid" 2>/dev/null || true
+  wait "$watchdog_pid" 2>/dev/null || true
+  watchdog_pid=""
+  [ "$download_result" -eq 0 ] || { echo 'Yello: runtime download failed or exceeded its 110-second deadline.' >&2; exit 1; }
+else
+  echo 'Yello: curl or wget is required for the first runtime download.' >&2; exit 1
+fi
+if command -v sha256sum >/dev/null 2>&1; then actual="$(sha256sum "$archive" | awk '{print $1}')";
+else actual="$(shasum -a 256 "$archive" | awk '{print $1}')"; fi
+[ "$actual" = "$digest" ] || { echo 'Yello: runtime checksum verification failed.' >&2; exit 1; }
+mkdir "$stage/runtime"
+tar -xzf "$archive" -C "$stage/runtime"
+reported="$("$stage/runtime/yello" --version | awk '{print $NF}' | sed 's/^v//')"
+[ "$reported" = "$version" ] || { echo 'Yello: runtime version does not match this plugin.' >&2; exit 1; }
+[ ! -e "$destination" ] || { echo 'Yello: incomplete runtime cache entry; remove it and retry.' >&2; exit 1; }
+printf '%s\n' "$digest" > "$stage/runtime/.verified"
+mv "$stage/runtime" "$destination"
+printf '%s\n' "$destination/yello"

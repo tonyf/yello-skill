@@ -1,13 +1,67 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { PiConnection, sessionEnvironment, yelloWrapper } from "./pi-connection";
+import { PiConnection } from "./pi-connection";
 import { registerDiscovery } from "./pi-discovery";
+import type { PiToolDefinition, PiToolArguments } from "./pi-protocol";
 
 export default function yello(pi: ExtensionAPI) {
 	let generation = 0;
 	let active: { id: string; connection: PiConnection } | undefined;
 	let startupContext: string | undefined;
 	const discovery = registerDiscovery(pi);
+
+	const registerTools = (catalog: PiToolDefinition[]) => {
+		for (const tool of catalog) {
+			pi.registerTool({
+				name: `yello_${tool.name}`,
+				label: `Yello: ${tool.name.replaceAll("_", " ")}`,
+				description: tool.description,
+				promptSnippet: tool.description,
+				parameters: Type.Unsafe<PiToolArguments>(tool.inputSchema),
+				async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+					const id = ctx.sessionManager.getSessionId();
+					const selected = active;
+
+					if (!selected || selected.id !== id) throw new Error("Run /yello-reconnect before using Yello tools.");
+					// The native session owns its title; profile sync preserves persistent names.
+					const input = { ...params };
+
+					if (tool.name === "set_context") delete input.name;
+
+					let result =
+						tool.name === "set_context" && input.description === undefined
+							? { ok: true, data: {} }
+							: await selected.connection.callTool(tool.name, input, signal, tool.readOnly);
+
+					const current = active === selected && ctx.sessionManager.getSessionId() === id;
+
+					if (!current && result.ok) {
+						result = {
+							ok: false,
+							error: {
+								code: tool.readOnly ? "session_changed" : "mutation_completion_interrupted",
+								message:
+									"The pi session changed during this call. Inspect the original result before retrying.",
+								details: {
+									context_key: `pi:${id}`,
+									tool: tool.name,
+									result: tool.readOnly ? undefined : result.data,
+								},
+							},
+						};
+					}
+
+					// oxlint-disable-next-line anti-slop/no-runtime-typeof -- The native tool catalog validates name as a string; narrow the generic JSON transport field for pi.
+					if (current && result.ok && tool.name === "set_context" && typeof params.name === "string")
+						pi.setSessionName(params.name);
+
+					if (!result.ok) throw new Error(JSON.stringify(result.error));
+
+					return { content: [{ type: "text", text: JSON.stringify(result) }], details: result };
+				},
+			});
+		}
+	};
 
 	const stop = async () => {
 		generation++;
@@ -36,7 +90,10 @@ export default function yello(pi: ExtensionAPI) {
 			(event) => {
 				if (!live()) return;
 
-				if (event.type === "context") startupContext = event.state === "needs_action" ? undefined : event.content;
+				if (event.type === "context") {
+					if (event.tools) registerTools(event.tools);
+					startupContext = event.state === "needs_action" ? undefined : event.content;
+				}
 
 				if (event.type === "context" && event.state === "needs_action") {
 					ctx.ui.notify(event.content, "warning");
@@ -94,45 +151,6 @@ export default function yello(pi: ExtensionAPI) {
 		description: "Reconnect this session's Yello identity and incoming messages",
 		handler: async (_args, ctx) => {
 			await start(ctx);
-		},
-	});
-	pi.registerTool({
-		name: "yello_set_context",
-		label: "Update Yello context",
-		description:
-			"Publish a concise conversation summary to this session's Yello profile. Optionally set the pi session name; Yello mirrors it only for temporary agents.",
-		promptSnippet: "Publish a conversation summary once substantive work is clear or reaches a meaningful milestone",
-		promptGuidelines: [
-			"Use yello_set_context once substantive work is clear and at meaningful milestones or task changes. Summarize current work for peers; optionally name an unnamed pi session. Casual conversation does not need a profile update.",
-		],
-		parameters: Type.Object({
-			description: Type.String({
-				minLength: 1,
-				maxLength: 1000,
-				description: "Current work and relevant context, suitable for peers who can see the agent",
-			}),
-			name: Type.Optional(Type.String({ minLength: 1, maxLength: 100, description: "Concise pi session name" })),
-		}),
-		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-			const id = ctx.sessionManager.getSessionId();
-			const current = generation;
-			const env = Object.entries(sessionEnvironment(id)).map(([key, value]) => `${key}=${value}`);
-
-			const result = await pi.exec(
-				"env",
-				[...env, "sh", yelloWrapper, "agent", "update", "--description", params.description, "--no-pretty"],
-				{ cwd: ctx.cwd, signal, timeout: 30000 },
-			);
-
-			if (result.code !== 0)
-				throw new Error(result.stderr.trim() || result.stdout.trim() || "Yello profile update failed.");
-
-			if (current !== generation || ctx.sessionManager.getSessionId() !== id)
-				throw new Error("The pi session changed during the profile update.");
-
-			if (params.name !== undefined) pi.setSessionName(params.name);
-
-			return { content: [{ type: "text", text: result.stdout.trim() }], details: {} };
 		},
 	});
 }
